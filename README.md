@@ -1,5 +1,5 @@
 # ShazamBot
-##Linux
+## Linux
 
 
 cd ~/
