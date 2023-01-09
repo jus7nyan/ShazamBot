@@ -1,4 +1,5 @@
 from aiogram import Bot, Dispatcher, executor, types
+from aiogram.utils.callback_data import CallbackData
 
 import lyricsgenius
 token = "XHUCKXOEPYzU8jy0kopz6e5NdhNNnpoTxgOzlq5vSMhvIFjXB72W-Kc_JnKzJmZF"
@@ -17,7 +18,7 @@ logging.basicConfig(level=logging.INFO, filename="bot.log",filemode="w")
 
 botpath = f"/home/{os.getlogin()}/ShazamBot"
 
-TOKEN = "Your Botfather api"
+TOKEN = ""
 
 bot = Bot(TOKEN)
 dp = Dispatcher(bot)
@@ -33,10 +34,11 @@ help_msg = """
 Хорошо что ты это спросил!
 /start                     старотовое сообщение
 /help                      это сообщение
-/yt-d [url] [format]      файл видео с [url] в формате audio/video поддерживаются youtube
+/yt_d [url] [format]      файл видео с [url] в формате audio/video поддерживаются youtube
 /lyr [search]              Ищет текст песни
 отправте гс файл или песню лично боту и он пришлет ее название и тест
 """
+songs = {}
 ### not Telegram async func ###
 
     ## Telegram ##
@@ -81,11 +83,19 @@ def add_user(message):
 
 
     ## LYR ##
-def get_text(text):
-	a = genius.search(text)
 
-	artist = a["hits"][0]["result"]["artist_names"]
-	title = a["hits"][0]["result"]["title"]
+def get_songs(text):
+    a = genius.search(text)["hits"]
+    songs = []
+    for i in range(len(a)):
+        artist = a[i]["result"]["artist_names"]
+        title = a[i]["result"]["title"]
+        songs.append(f"{artist} -- {title}")
+    return songs
+
+def get_text(song):
+	artist = song.split(" -- ")[0]
+	title = song.split(" -- ")[1]
 
 	song = genius.search_song(title,artist)
 
@@ -117,8 +127,8 @@ async def on_start(message: types.Message):
     add_user(message)
     await bot_reply(message, help_msg)
 
-
-@dp.message_handler(commands=["yt-d"])
+callback_yt = CallbackData("yt", "action")
+@dp.message_handler(commands=["yt_d"])
 async def yt_d(message: types.Message):
     user_fn, user_id, text, m_time = mes_inf(message, log=False)
     add_user(message)
@@ -127,7 +137,7 @@ async def yt_d(message: types.Message):
     try:
         vtype = text[1]
     except:
-        vtype = "mp4"
+        vtype = "video"
     flen = len(os.listdir(f"{botpath}/videos"))
 
     await bot_reply(message, "Загружаем видео...")
@@ -151,16 +161,22 @@ async def yt_d(message: types.Message):
             await bot_reply(message, "Файл не должен весить больше 50 мб. извините.")
             logging.info("BOT info: Провал ")
 
+
+cb_lyr = CallbackData("lyr", "id", "chat")
 @dp.message_handler(commands=["lyr"])
 async def Lyrics(message: types.Message):
     user_fn,user_id,text,m_time = mes_inf(message, log=False)
     add_user(message)
     search = text.split(" ")[1:]
-    print(search)
-    a = get_text(" ".join(search))
+    print(" ".join(search))
     
-    ans = f"{a[1]} - {a[2]}\n\n\n{a[0].replace('Embed','').replace('You might also like','')}"
-    await bot_reply(message, ans)
+    songs.update({str(message.chat.id) : get_songs(" ".join(search))})
+    keyboard = types.InlineKeyboardMarkup()
+    for i in range(len(songs[str(message.chat.id)])):
+        n_song = songs[str(message.chat.id)][i]
+        keyboard.add(types.InlineKeyboardButton(text=n_song, callback_data=cb_lyr.new(id=str(i), chat=str(message.chat.id))))
+    await message.answer("Выбери нужную песню: ", reply_markup=keyboard)
+    
 
 @dp.message_handler(content_types=[types.ContentType.VOICE,types.ContentType.AUDIO,types.ContentType.DOCUMENT])
 async def on_shazam(message: types.Message):
@@ -190,6 +206,21 @@ async def on_shazam(message: types.Message):
         lyr = ""
     ans = f"{title} - {artist}\n\n {lyr}"
     await bot_reply(message, ans)
+
+
+#### CALLBACK Handler
+@dp.callback_query_handler(cb_lyr.filter())
+async def callback_lyr(call: types.CallbackQuery, callback_data: dict):
+    sid = int(callback_data["id"])
+    chat = callback_data["chat"]
+    
+    text = songs[chat][sid]
+    
+    a = get_text(text)
+    ans = f"{a[1]} - {a[2]}\n\n\n{a[0].replace('Embed','').replace('You might also like','')}"
+    await bot_reply(call.message, ans)
+    await call.answer()
+        
 
 
 if __name__ == "__main__":
