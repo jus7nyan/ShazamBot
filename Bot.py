@@ -13,12 +13,20 @@ import os
 import json
 import time
 
+from yt_d import yt_down
+
 
 logging.basicConfig(level=logging.INFO, filename="bot.log",filemode="w")
 
-botpath = f"/home/{os.getlogin()}/ShazamBot"
+botpath = os.getcwd()
 
-TOKEN = ""
+with open("Token.json","r+") as fl:
+    Tfile = fl.read()
+    try:
+        TOKEN = json.loads(Tfile)["TOKEN"]
+    except:
+        TOKEN = input("введите токен (https://t.me/BotFather): ")
+        fl.write(json.dumps({"TOKEN":TOKEN}, sort_keys=True, indent=4))
 
 bot = Bot(TOKEN)
 dp = Dispatcher(bot)
@@ -138,28 +146,32 @@ async def yt_d(message: types.Message):
         vtype = text[1]
     except:
         vtype = "video"
-    flen = len(os.listdir(f"{botpath}/videos"))
+
+    flen = len(os.listdir(f"{botpath}/yt"))
 
     await bot_reply(message, "Загружаем видео...")
+
     if "youtu" in url:
         service = "youtube"
-    elif "pornhub" in url:
-        service = "pornhub"
-    os.system(f"./yt-dl.sh {url} {botpath}/videos {vtype} {flen} {service}")
-    if vtype == "audio":
+        
+    f = yt_down(url, vtype, f"{botpath}/yt/", flen)
+    if f == "mp3":
         try:
-            await message.answer_audio(open(f"{botpath}/videos/{flen}.mp3","rb"))
-            logging.info("BOT info: Успешно ")
+            with open(f"{botpath}/yt/{flen}.{f}","rb") as doc:
+                await message.answer_audio(doc)
+                logging.info("BOT info: Успешно ")
         except:
             await bot_reply(message, "Файл не должен весить больше 50 мб. извините.")
             logging.info("BOT info: Провал ")
     else:
         try:
-            await message.answer_video(open(f"{botpath}/videos/{flen}.mp4","rb"))
-            logging.info("BOT info: Успешно ")
+            with open(f"{botpath}/yt/{flen}.{f}","rb") as doc:
+                await message.answer_video(doc)
+                logging.info("BOT info: Успешно ")
         except:
             await bot_reply(message, "Файл не должен весить больше 50 мб. извините.")
             logging.info("BOT info: Провал ")
+    
 
 
 cb_lyr = CallbackData("lyr", "id", "chat")

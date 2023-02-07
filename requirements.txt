@@ -1,3 +1,4 @@
 shazamio
 lyricsgenius
 aiogram
+yt-dlp
