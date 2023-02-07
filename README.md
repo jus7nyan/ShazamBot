@@ -14,30 +14,11 @@ cd ShazamBot
 
 
 
+mkdir yt
+
+
+
 mkdir music
-
-
-
-mkdir videos
-
-
-nano Bot.py
-
-
-
-paste your bot api token in var TOKEN
-
-
-
-Ctrl+o
-
-
-
-Enter
-
-
-
-Ctrl+x
 
 
 
