@@ -50,7 +50,7 @@ songs = {}
 ### not Telegram async func ###
 
     ## Telegram ##
-def mes_inf(message, log=True):
+def mes_inf(message, log=False):
     user_id = message.from_user.id
     user_fn = message.from_user.full_name
     m_time = time.asctime()
